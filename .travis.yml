@@ -8,3 +8,6 @@ before_script:
   - cmake ..
 
 script: make
+
+after_script:
+  - ctest
