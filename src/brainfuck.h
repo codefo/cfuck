@@ -10,10 +10,10 @@
 #define MAX_ARRAY_LENGTH 30000
 
 struct instruction {
-    char operation;
-    unsigned long count;
     unsigned long line;
     unsigned long position;
+    char operation;
+    unsigned long count;
     struct instruction *next;
     struct instruction *loop;
 };
