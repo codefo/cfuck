@@ -82,16 +82,22 @@ struct instruction *parse(char *source) {
     int result = 1;
 
     unsigned long line = 1;
-    unsigned long position;
+    unsigned long position = 0;
+
+    unsigned long index;
 
     struct node *stack = NULL;
 
     struct instruction *head = NULL, *current = NULL, *temp;
 
-    for (position = 0; source[position]; position++) {
-        char token = source[position];
+    for (index = 0; source[index]; index++, position++) {
+        char token = source[index];
 
-        if (token == '\n') line++;
+        if (token == '\n') {
+            line++;
+            position = 0;
+        }
+
         if (!is_valid_token(token)) continue;
 
         temp = create(token, line, position, current);
