@@ -12,5 +12,12 @@ enable_testing()
 
 add_test(NAME helloworld_test_01 COMMAND cfuck
     ${CMAKE_CURRENT_SOURCE_DIR}/examples/helloworld.bf)
+set_tests_properties(helloworld_test_01 PROPERTIES TIMEOUT 5)
 set_tests_properties(helloworld_test_01
     PROPERTIES PASS_REGULAR_EXPRESSION "Hello, world!")
+
+add_test(NAME helloworld_test_02 COMMAND cfuck
+    ${CMAKE_CURRENT_SOURCE_DIR}/examples/hellocfuck.bf)
+set_tests_properties(helloworld_test_02 PROPERTIES TIMEOUT 5)
+set_tests_properties(helloworld_test_02
+    PROPERTIES PASS_REGULAR_EXPRESSION "Hello, cfuck!")
