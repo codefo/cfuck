@@ -111,15 +111,14 @@ struct instruction *parse(char *source) {
         }
 
         if (current->operation == LOOP_START_TOKEN) {
-            stack = push(stack, current);
+
         }
-    }
 
-    current = head;
-
-    while (current) {
-
-        if (current->operation == LOOP_END_TOKEN) {
+        switch (current->operation) {
+        case LOOP_START_TOKEN: {
+            stack = push(stack, current);
+        } break;
+        case LOOP_END_TOKEN: {
             struct instruction *loop = NULL;
 
             if (is_empty(stack)) {
@@ -127,13 +126,12 @@ struct instruction *parse(char *source) {
                 log_loop_error(current);
             } else {
                 stack = pop(stack, &loop);
-                loop->loop = loop->next;
-                loop->next = current->next;
-                current->next = loop;
+                current->loop = loop;
+                loop->loop = current;
             }
+        } break;
+        default: break;
         }
-
-        current = current->next;
     }
 
     while (!is_empty(stack)) {
@@ -182,10 +180,14 @@ void interpret(struct instruction *head) {
 
         if (operation == LOOP_START_TOKEN) {
             if (array[index] == 0) {
-                step = step->next;
+                step = step->loop->next;
             } else {
-                step = step->loop;
+                step = step->next;
             }
+
+            continue;
+        } else if (operation == LOOP_END_TOKEN) {
+            step = step->loop;
 
             continue;
         }
