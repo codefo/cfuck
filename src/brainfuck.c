@@ -30,22 +30,19 @@ int is_empty(struct node *head) {
     return head == NULL ? 1 : 0;
 }
 
-int is_simple_token(char token) {
-    return token == NEXT_TOKEN
-            || token == PREV_TOKEN
-            || token == INC_TOKEN
-            || token == DEC_TOKEN
-            || token == WRITE_TOKEN
-            || token == READ_TOKEN;
-}
-
 int is_loop_token(char token) {
     return token == LOOP_START_TOKEN
             || token == LOOP_END_TOKEN;
 }
 
 int is_valid_token(char token) {
-    return is_simple_token(token) || is_loop_token(token);
+    return token == NEXT_TOKEN
+            || token == PREV_TOKEN
+            || token == INC_TOKEN
+            || token == DEC_TOKEN
+            || token == WRITE_TOKEN
+            || token == READ_TOKEN
+            || is_loop_token(token);
 }
 
 void log_loop_error(struct instruction *item) {
@@ -108,10 +105,6 @@ struct instruction *parse(char *source) {
         } else {
             current->next = temp;
             current = temp;
-        }
-
-        if (current->operation == LOOP_START_TOKEN) {
-
         }
 
         switch (current->operation) {
