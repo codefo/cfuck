@@ -137,11 +137,11 @@ struct instruction *parse(char *source) {
     return result ? head : NULL;
 }
 
-unsigned long next_operation(unsigned long index, unsigned long count) {
+unsigned long next(unsigned long index, unsigned long count) {
     return (index + count) % MAX_ARRAY_LENGTH;
 }
 
-unsigned long prev_operation(unsigned long index, unsigned long count) {
+unsigned long prev(unsigned long index, unsigned long count) {
     if ((index - count) < 0) {
         return MAX_ARRAY_LENGTH + index - count;
     } else {
@@ -149,64 +149,48 @@ unsigned long prev_operation(unsigned long index, unsigned long count) {
     }
 }
 
-void write_operation(char *array, unsigned long index, unsigned long count) {
+void write(char *array, unsigned long index, unsigned long count) {
     for (unsigned long i = 0; i < count; i++) {
         printf("%c", array[index]);
     }
 }
 
-void read_operation(char *array, unsigned long index, unsigned long count) {
+void read(char *array, unsigned long index, unsigned long count) {
     for (unsigned long i = 0; i < count; i++) {
         array[index] = (char) getchar();
     }
 }
 
-void interpret(struct instruction *head) {
-    struct instruction *step;
+void interpret(struct instruction *step) {
     char array[MAX_ARRAY_LENGTH];
     unsigned long index = 0;
 
-    step = head;
-
     while (step) {
         char operation = step->operation;
+        unsigned long count = step->count;
 
         if (operation == LOOP_START_TOKEN) {
-            if (array[index] == 0) {
-                step = step->loop->next;
-            } else {
-                step = step->next;
-            }
-
+            step = (array[index] ? step : step->loop)->next;
             continue;
         } else if (operation == LOOP_END_TOKEN) {
             step = step->loop;
-
             continue;
         }
 
-        unsigned long count = step->count;
-
         switch (operation) {
-            case NEXT_TOKEN:
-                index = next_operation(index, count);
-                break;
-            case PREV_TOKEN:
-                index = prev_operation(index, count);
-                break;
-            case INC_TOKEN:
-                array[index] += count;
-                break;
-            case DEC_TOKEN:
-                array[index] -= count;
-                break;
-            case WRITE_TOKEN:
-                write_operation(array, index, count);
-                break;
-            case READ_TOKEN:
-                read_operation(array, index, count);
-                break;
-            default: break;
+        case INC_TOKEN: array[index] += count;
+            break;
+        case DEC_TOKEN: array[index] -= count;
+            break;
+        case NEXT_TOKEN: index = next(index, count);
+            break;
+        case PREV_TOKEN: index = prev(index, count);
+            break;
+        case READ_TOKEN: read(array, index, count);
+            break;
+        case WRITE_TOKEN: write(array, index, count);
+            break;
+        default: break;
         }
 
         step = step->next;
