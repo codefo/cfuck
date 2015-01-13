@@ -4,7 +4,7 @@
 #include "brainfuck.h"
 
 #define PROGRAM_NAME "cfuck"
-#define VERSION "0.1.0"
+#define VERSION "0.2.0"
 #define YEAR "2015"
 #define AUTHOR "Gleb Pospelov <codefo@codefo.com>"
 
