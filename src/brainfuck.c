@@ -220,5 +220,5 @@ void run(char *source) {
 
     if (head == NULL) return;
 
-    interpret(head);
+    interpret((struct instruction *) head);
 }
