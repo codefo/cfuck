@@ -3,8 +3,16 @@
 
 #include "brainfuck.h"
 
-struct node *push(struct node *head, struct instruction *value) {
-    struct node *temp = (struct node *) malloc(sizeof(struct node));
+void log_loop_error(struct step *item) {
+    if (item == NULL) return;
+    fprintf(stderr, "Error [%lu:%lu]\n", item->line, item->position);
+}
+
+/*
+ * Push step to stack
+ */
+struct stack *push(struct stack *head, struct step *value) {
+    struct stack *temp = (struct stack *) malloc(sizeof(struct stack));
 
     // TODO: check temp is NULL
 
@@ -15,8 +23,11 @@ struct node *push(struct node *head, struct instruction *value) {
     return head;
 }
 
-struct node *pop(struct node *head, struct instruction **item) {
-    struct node *temp = head;
+/*
+ * Pop step from stack
+ */
+struct stack *pop(struct stack *head, struct step **item) {
+    struct stack *temp = head;
 
     *item = head->value;
     head = head->next;
@@ -26,115 +37,97 @@ struct node *pop(struct node *head, struct instruction **item) {
     return head;
 }
 
-int is_empty(struct node *head) {
-    return head == NULL ? 1 : 0;
-}
-
-int is_loop_token(char token) {
-    return token == LOOP_START_TOKEN
-            || token == LOOP_END_TOKEN;
-}
-
-int is_valid_token(char token) {
+/*
+ * Check token for filter source code
+ */
+int is_brainfuck_token(char token) {
     return token == NEXT_TOKEN
             || token == PREV_TOKEN
             || token == INC_TOKEN
             || token == DEC_TOKEN
             || token == WRITE_TOKEN
             || token == READ_TOKEN
-            || is_loop_token(token);
+            || token == LOOP_START_TOKEN
+            || token == LOOP_END_TOKEN;
 }
 
-void log_loop_error(struct instruction *item) {
-    if (item == NULL) return;
-    fprintf(stderr, "Error [%lu:%lu]\n", item->line, item->position);
-}
+/*
+ * Create step or return last step if is not a loop and same operations
+ */
+struct step *create(char token, struct step *last) {
+    int is_not_loop = token != LOOP_START_TOKEN && token != LOOP_END_TOKEN;
+    int is_repeating = last != NULL && last->operation == token;
 
-struct instruction *create(
-        char token,
-        unsigned long line,
-        unsigned long position,
-        struct instruction *current) {
-
-    struct instruction *result;
-
-    if (!is_loop_token(token) && current != NULL && current->operation == token) {
-        current->count++;
-        result = current;
-    } else {
-        result = (struct instruction *) malloc(sizeof(struct instruction));
-
-        // TODO: check temp is NULL
-
-        result->operation = token;
-        result->count = 1;
-        result->line = line;
-        result->position = position + 1;
+    if (is_not_loop && is_repeating) {
+        last->count += 1;
+        return last;
     }
+
+    struct step *result = (struct step *) malloc(sizeof(struct step));
+
+    // TODO: check temp is NULL
+
+    result->operation = token;
+    result->count = 1;
 
     return result;
 }
 
-struct instruction *parse(char *source) {
-    int result = 1;
+struct step *parse(char *source) {
+    int errors = 0;
 
     unsigned long line = 1;
-    unsigned long position = 0;
+    unsigned long position = 1;
 
-    unsigned long index;
+    struct stack *stack = NULL;
 
-    struct node *stack = NULL;
+    struct step *first = (struct step *) malloc(sizeof(struct step)),
+                *current = first,
+                *temp;
 
-    struct instruction *head = NULL, *current = NULL, *temp;
-
-    for (index = 0; source[index]; index++, position++) {
+    for (unsigned long index = 0; source[index]; index++, ++position) {
         char token = source[index];
 
         if (token == '\n') {
             line++;
-            position = 0;
+            position = 1;
         }
 
-        if (!is_valid_token(token)) continue;
+        if (!is_brainfuck_token(token)) continue;
 
-        temp = create(token, line, position, current);
+        temp = create(token, current);
 
-        if (head == NULL) {
-            head = temp;
-            current = head;
-        } else {
-            current->next = temp;
-            current = temp;
-        }
+        temp->line = line;
+        temp->position = position;
 
-        switch (current->operation) {
-        case LOOP_START_TOKEN: {
+        current->next = temp;
+        current = temp;
+
+        if (current->operation == LOOP_START_TOKEN) {
             stack = push(stack, current);
-        } break;
-        case LOOP_END_TOKEN: {
-            struct instruction *loop = NULL;
+        }
 
-            if (is_empty(stack)) {
-                result = 0;
+        if (current->operation == LOOP_END_TOKEN) {
+            if (stack == NULL) {
+                errors++;
                 log_loop_error(current);
             } else {
+                struct step *loop = NULL;
                 stack = pop(stack, &loop);
                 current->loop = loop;
                 loop->loop = current;
             }
-        } break;
-        default: break;
         }
     }
 
-    while (!is_empty(stack)) {
-        result = 0;
-        struct instruction *loop = NULL;
+    while (stack != NULL) {
+        errors++;
+        struct step *loop = NULL;
         stack = pop(stack, &loop);
         log_loop_error(loop);
     }
 
-    return result ? head : NULL;
+    return errors ? NULL : first;
 }
 
 unsigned long next(unsigned long index, unsigned long count) {
@@ -149,20 +142,20 @@ unsigned long prev(unsigned long index, unsigned long count) {
     }
 }
 
-void write(char *array, unsigned long index, unsigned long count) {
+void write(char *tape, unsigned long index, unsigned long count) {
     for (unsigned long i = 0; i < count; i++) {
-        printf("%c", array[index]);
+        printf("%c", tape[index]);
     }
 }
 
-void read(char *array, unsigned long index, unsigned long count) {
+void read(char *tape, unsigned long index, unsigned long count) {
     for (unsigned long i = 0; i < count; i++) {
-        array[index] = (char) getchar();
+        tape[index] = (char) getchar();
     }
 }
 
-void interpret(struct instruction *step) {
-    char array[MAX_ARRAY_LENGTH];
+void interpret(struct step *step) {
+    char tape[MAX_ARRAY_LENGTH];
     unsigned long index = 0;
 
     while (step) {
@@ -170,7 +163,7 @@ void interpret(struct instruction *step) {
         unsigned long count = step->count;
 
         if (operation == LOOP_START_TOKEN) {
-            step = (array[index] ? step : step->loop)->next;
+            step = (tape[index] ? step : step->loop)->next;
             continue;
         } else if (operation == LOOP_END_TOKEN) {
             step = step->loop;
@@ -178,17 +171,17 @@ void interpret(struct instruction *step) {
         }
 
         switch (operation) {
-        case INC_TOKEN: array[index] += count;
+        case INC_TOKEN: tape[index] += count;
             break;
-        case DEC_TOKEN: array[index] -= count;
+        case DEC_TOKEN: tape[index] -= count;
             break;
         case NEXT_TOKEN: index = next(index, count);
             break;
         case PREV_TOKEN: index = prev(index, count);
             break;
-        case READ_TOKEN: read(array, index, count);
+        case READ_TOKEN: read(tape, index, count);
             break;
-        case WRITE_TOKEN: write(array, index, count);
+        case WRITE_TOKEN: write(tape, index, count);
             break;
         default: break;
         }
@@ -198,11 +191,9 @@ void interpret(struct instruction *step) {
 }
 
 void run(char *source) {
-    struct instrucation *head = NULL;
-
-    head = (struct instrucation *) parse(source);
+    struct step *head = parse(source);
 
     if (head == NULL) return;
 
-    interpret((struct instruction *) head);
+    interpret(head);
 }

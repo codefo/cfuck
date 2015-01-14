@@ -4,16 +4,11 @@
 #include "brainfuck.h"
 
 #define PROGRAM_NAME "cfuck"
-#define VERSION "0.2.0"
+#define VERSION "0.2.1"
 #define YEAR "2015"
 #define AUTHOR "Gleb Pospelov <codefo@codefo.com>"
 
 #define ERROR_FILE_NOT_OPENED "Input file not opened"
-
-void show_prompt() {
-    printf("%s %s %s\n", PROGRAM_NAME, VERSION, YEAR);
-    printf("%s\n\n", AUTHOR);
-}
 
 void run_file(char *path) {
     char *buffer = NULL;
@@ -43,6 +38,9 @@ void run_file(char *path) {
 }
 
 void run_repl() {
+    printf("%s %s %s\n", PROGRAM_NAME, VERSION, YEAR);
+    printf("%s\n\n", AUTHOR);
+
     unsigned long index = 1;
     char *line = NULL;
     size_t length = 0;
@@ -68,7 +66,6 @@ int main(int argc, char *argv[]) {
     if (argc > 1) {
         run_file(argv[1]);
     } else {
-        show_prompt();
         run_repl();
     }
 

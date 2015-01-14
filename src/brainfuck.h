@@ -9,18 +9,18 @@
 
 #define MAX_ARRAY_LENGTH 30000
 
-struct instruction {
+struct step {
     unsigned long line;
     unsigned long position;
     char operation;
     unsigned long count;
-    struct instruction *next;
-    struct instruction *loop;
+    struct step *next;
+    struct step *loop;
 };
 
-struct node {
-    struct instruction *value;
-    struct node *next;
+struct stack {
+    struct step *value;
+    struct stack *next;
 };
 
 void run(char *source);
