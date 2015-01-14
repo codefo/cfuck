@@ -10,7 +10,7 @@
 
 #define ERROR_FILE_NOT_OPENED "Input file not opened"
 
-void run_file(char *path) {
+int run_file(char *path) {
     char *buffer = NULL;
     FILE *file = NULL;
     size_t length;
@@ -34,7 +34,7 @@ void run_file(char *path) {
 
     fclose(file);
 
-    run(buffer);
+    return run(buffer);
 }
 
 void run_repl() {
@@ -64,7 +64,7 @@ void run_repl() {
 int main(int argc, char *argv[]) {
 
     if (argc > 1) {
-        run_file(argv[1]);
+        return run_file(argv[1]);
     } else {
         run_repl();
     }

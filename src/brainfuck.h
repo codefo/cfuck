@@ -23,4 +23,9 @@ struct stack {
     struct stack *next;
 };
 
-void run(char *source);
+struct state {
+    struct step *first;
+    struct stack *errors;
+};
+
+int run(char *source);

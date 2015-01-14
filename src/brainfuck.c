@@ -5,7 +5,7 @@
 
 void log_loop_error(struct step *item) {
     if (item == NULL) return;
-    fprintf(stderr, "Error [%lu:%lu]\n", item->line, item->position);
+    fprintf(stderr, "Error [%lu:%lu\n", item->line, item->position);
 }
 
 /*
@@ -73,13 +73,47 @@ struct step *create(char token, struct step *last) {
     return result;
 }
 
-struct step *parse(char *source) {
-    int errors = 0;
+/*
+ * Binding sibling loop steps
+ */
+int bind(struct stack **stack, struct step *step) {
+    if (step->operation == LOOP_START_TOKEN) {
+        *stack = push(*stack, step);
 
+        return 0;
+    }
+
+    if (step->operation == LOOP_END_TOKEN) {
+        if (*stack == NULL) return 1;
+
+        struct step *sibling = NULL;
+        *stack = pop(*stack, &sibling);
+        step->loop = sibling;
+        sibling->loop = step;
+    }
+
+    return 0;
+}
+
+/*
+ * Append stack to errors if stack is not empty
+ */
+struct stack *append(struct stack *stack, struct stack *errors) {
+    if (stack != NULL) {
+        if (errors == NULL) return stack;
+
+        errors->next = stack;
+    }
+
+    return errors;
+}
+
+struct state *parse(char *source) {
     unsigned long line = 1;
     unsigned long position = 1;
 
-    struct stack *stack = NULL;
+    struct stack *stack = NULL,
+                 *errors = NULL;
 
     struct step *first = (struct step *) malloc(sizeof(struct step)),
                 *current = first,
@@ -90,7 +124,7 @@ struct step *parse(char *source) {
 
         if (token == '\n') {
             line++;
-            position = 1;
+            position = 0;
         }
 
         if (!is_brainfuck_token(token)) continue;
@@ -103,31 +137,17 @@ struct step *parse(char *source) {
         current->next = temp;
         current = temp;
 
-        if (current->operation == LOOP_START_TOKEN) {
-            stack = push(stack, current);
-        }
-
-        if (current->operation == LOOP_END_TOKEN) {
-            if (stack == NULL) {
-                errors++;
-                log_loop_error(current);
-            } else {
-                struct step *loop = NULL;
-                stack = pop(stack, &loop);
-                current->loop = loop;
-                loop->loop = current;
-            }
+        if (bind(&stack, current)) {
+            errors = push(errors, current);
         }
     }
 
-    while (stack != NULL) {
-        errors++;
-        struct step *loop = NULL;
-        stack = pop(stack, &loop);
-        log_loop_error(loop);
-    }
+    struct state *result = (struct state *) malloc(sizeof(struct state));
 
-    return errors ? NULL : first;
+    result->errors = append(stack, errors);
+    result->first = result->errors == NULL ? first : NULL;
+
+    return result;
 }
 
 unsigned long next(unsigned long index, unsigned long count) {
@@ -190,10 +210,20 @@ void interpret(struct step *step) {
     }
 }
 
-void run(char *source) {
-    struct step *head = parse(source);
+int run(char *source) {
+    struct state *state = parse(source);
 
-    if (head == NULL) return;
+    if (state->errors != NULL) {
+        while (state->errors != NULL) {
+            struct step *step = NULL;
+            state->errors = pop(state->errors, &step);
+            log_loop_error(step);
+        }
 
-    interpret(head);
+        return EXIT_FAILURE;
+    }
+
+    interpret(state->first);
+
+    return EXIT_SUCCESS;
 }
